@@ -15,7 +15,7 @@ An advanced, all-in-one tool using MediaPipe AI to drive PNGTuber avatars (like 
 
 ### For Users (Standalone)
 
-Download the latest version from the **[Releases](https://github.com///releases)** page.
+Download the latest version from the **[Releases](https://github.com/Raiitro/VeadoController/releases)** page.
 
 1. Download `PNGTuber_Controller.exe`.
 2. Run the application.
