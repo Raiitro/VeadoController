@@ -1,0 +1,21 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+venv/
+PNGTuber_Controller.spec
+
+# IDE
+.vscode/
+.idea/
+
+# Distribution & Build
+build/
+dist/
+*.spec
+
+# Données utilisateur
+config.json
+
+# Modèles volumineux (Optionnel, voir Git LFS si tu veux les inclure)
+*.task
