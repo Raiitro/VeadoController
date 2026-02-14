@@ -6,7 +6,7 @@ import json
 import math
 import threading
 
-# --- 1. CONFIGURATION DYNAMIQUE TCL/TK ---
+# --- 1. DYNAMIC TCL/TK CONFIGURATION ---
 if getattr(sys, 'frozen', False):
     base_path = sys._MEIPASS
     os.environ['TCL_LIBRARY'] = os.path.join(base_path, 'tcl', 'tcl8.6')
@@ -29,7 +29,7 @@ from mediapipe.tasks.python import vision
 import pyautogui
 
 def resource_path(relative_path):
-    """ Gestion des chemins pour les fichiers inclus dans l'EXE """
+    """ Path management for files included in the EXE """
     try:
         base_path = sys._MEIPASS
     except Exception:
@@ -41,7 +41,7 @@ CONFIG_FILE = "config.json"
 FACE_MODEL_PATH = resource_path('models/face_landmarker.task')
 HAND_MODEL_PATH = resource_path('models/hand_landmarker.task')
 
-# --- LOGIQUE DE STABILISATION ---
+# --- STABILIZATION LOGIC ---
 class StableScore:
     def __init__(self, window_size=5):
         self.history = deque(maxlen=window_size)
@@ -58,7 +58,7 @@ class StableScore:
             
         return self.state, smoothed_value
 
-# --- LOGIQUE IA ---
+# --- LOGIC AI ---
 class EmotionDetector:
     def __init__(self):
         self.running = False
@@ -84,16 +84,16 @@ class EmotionDetector:
         except:
             self.has_hand_model = False
 
-        self.current_action = "NEUTRE"
+        self.current_action = "NEUTRAL"
         
         self.stables = {
-            "FRONCEMENT": StableScore(window_size=6),
-            "SOURIRE": StableScore(window_size=6),
-            "HAUSSEMENT": StableScore(window_size=4),
-            "MALICIEUX": StableScore(window_size=5),
-            "PENCHE": StableScore(window_size=6),
-            "CLIN_DOEIL": StableScore(window_size=4),
-            "REFLECHIR": StableScore(window_size=5)
+            "FROWN": StableScore(window_size=6),
+            "SMILE": StableScore(window_size=6),
+            "RAISE": StableScore(window_size=4),
+            "MALICIOUS": StableScore(window_size=5),
+            "TILT": StableScore(window_size=6),
+            "WINK": StableScore(window_size=4),
+            "THINKING": StableScore(window_size=5)
         }
         
         self.unlock_time = 0 
@@ -108,7 +108,7 @@ class EmotionDetector:
         if self.has_hand_model:
             hand_result = self.hand_detector.detect(mp_image)
         
-        physical_action = "NEUTRE"
+        physical_action = "NEUTRAL"
 
         if face_result.face_landmarks and face_result.face_blendshapes:
             landmarks = face_result.face_landmarks[0]
@@ -134,73 +134,73 @@ class EmotionDetector:
                     if min_dist < 0.20:
                         raw_thinking = max(raw_thinking, (0.20 - min_dist) * 5.0)
 
-            # CALCUL DES ETATS
+            # CALCULATION OF STATES
             is_thinking = False
-            if enabled_dict.get("REFLECHIR", True) and self.has_hand_model:
-                is_thinking, _ = self.stables["REFLECHIR"].update(raw_thinking, thresholds['REFLECHIR'], thresholds['REFLECHIR'] - 0.15)
+            if enabled_dict.get("THINKING", True) and self.has_hand_model:
+                is_thinking, _ = self.stables["THINKING"].update(raw_thinking, thresholds['THINKING'], thresholds['THINKING'] - 0.15)
 
             is_malicious = False
-            if enabled_dict.get("MALICIEUX", True):
+            if enabled_dict.get("MALICIOUS", True):
                 raw_malicious = (raw_brow_down + raw_smile) / 2
                 if raw_brow_down < 0.25 or raw_smile < 0.25: raw_malicious = 0
-                is_malicious, _ = self.stables["MALICIEUX"].update(raw_malicious, thresholds['MALICIEUX'], thresholds['MALICIEUX'] - 0.15)
+                is_malicious, _ = self.stables["MALICIOUS"].update(raw_malicious, thresholds['MALICIOUS'], thresholds['MALICIOUS'] - 0.15)
 
             is_winking = False
-            if enabled_dict.get("CLIN_DOEIL", True) and not is_malicious:
+            if enabled_dict.get("WINK", True) and not is_malicious:
                 raw_wink = abs(s.get('eyeBlinkLeft', 0) - s.get('eyeBlinkRight', 0))
-                is_winking, _ = self.stables["CLIN_DOEIL"].update(raw_wink, thresholds['CLIN_DOEIL'], thresholds['CLIN_DOEIL'] - 0.15)
+                is_winking, _ = self.stables["WINK"].update(raw_wink, thresholds['WINK'], thresholds['WINK'] - 0.15)
 
             is_tilting = False
-            if enabled_dict.get("PENCHE", True) and not is_malicious and not is_winking:
-                is_tilting, _ = self.stables["PENCHE"].update(raw_tilt, thresholds['PENCHE'], thresholds['PENCHE'] - 0.10)
+            if enabled_dict.get("TILT", True) and not is_malicious and not is_winking:
+                is_tilting, _ = self.stables["TILT"].update(raw_tilt, thresholds['TILT'], thresholds['TILT'] - 0.10)
 
             is_frowning = False
-            if enabled_dict.get("FRONCEMENT", True) and not is_malicious and not is_winking:
+            if enabled_dict.get("FROWN", True) and not is_malicious and not is_winking:
                 frown_score = raw_brow_down
                 if raw_brow_up > 0.4: frown_score = 0 
-                is_frowning, _ = self.stables["FRONCEMENT"].update(frown_score, thresholds['FRONCEMENT'], thresholds['FRONCEMENT'] - 0.15)
+                is_frowning, _ = self.stables["FROWN"].update(frown_score, thresholds['FROWN'], thresholds['FROWN'] - 0.15)
 
             is_raising = False
-            if enabled_dict.get("HAUSSEMENT", True) and not is_tilting:
-                is_raising, _ = self.stables["HAUSSEMENT"].update(raw_brow_up, thresholds['HAUSSEMENT'], thresholds['HAUSSEMENT'] - 0.15)
+            if enabled_dict.get("RAISE", True) and not is_tilting:
+                is_raising, _ = self.stables["RAISE"].update(raw_brow_up, thresholds['RAISE'], thresholds['RAISE'] - 0.15)
 
             is_smiling = False
-            if enabled_dict.get("SOURIRE", True) and not is_malicious and not is_winking and not is_tilting:
-                is_smiling, _ = self.stables["SOURIRE"].update(raw_smile, thresholds['SOURIRE'], thresholds['SOURIRE'] - 0.15)
+            if enabled_dict.get("SMILE", True) and not is_malicious and not is_winking and not is_tilting:
+                is_smiling, _ = self.stables["SMILE"].update(raw_smile, thresholds['SMILE'], thresholds['SMILE'] - 0.15)
 
-            if is_thinking: physical_action = "REFLECHIR"
-            elif is_malicious: physical_action = "MALICIEUX"
-            elif is_winking: physical_action = "CLIN_DOEIL"
-            elif is_tilting: physical_action = "PENCHE"
-            elif is_frowning: physical_action = "FRONCEMENT"
-            elif is_raising: physical_action = "HAUSSEMENT"
-            elif is_smiling: physical_action = "SOURIRE"
+            if is_thinking: physical_action = "THINKING"
+            elif is_malicious: physical_action = "MALICIOUS"
+            elif is_winking: physical_action = "WINK"
+            elif is_tilting: physical_action = "TILT"
+            elif is_frowning: physical_action = "FROWN"
+            elif is_raising: physical_action = "RAISE"
+            elif is_smiling: physical_action = "SMILE"
 
         now = time.time()
-        if self.current_action != "NEUTRE" and now < self.unlock_time:
+        if self.current_action != "NEUTRAL" and now < self.unlock_time:
             return self.current_action
         
         if physical_action != self.current_action:
-            if physical_action != "NEUTRE":
+            if physical_action != "NEUTRAL":
                 duration = float(min_durations.get(physical_action, 0.0))
                 self.unlock_time = now + duration
             return physical_action
         
         return self.current_action
 
-# --- NOUVEAU : FENÊTRE ASSISTANT DE CONFIG ---
+# --- CONFIG WIZARD WINDOW ---
 class SetupWizard(tk.Toplevel):
     def __init__(self, parent, config):
         super().__init__(parent)
-        self.title("Assistant de Calibrage des Touches")
+        self.title("Key Calibration Assistant")
         self.geometry("500x500")
         self.config = config
         self.parent = parent
         
-        tk.Label(self, text="Cliquez sur 'Envoyer' pour simuler la touche.\nVous avez 3 secondes pour cliquer sur votre logiciel de Stream.", 
+        tk.Label(self, text="Click on 'Send' to simulate the key.\nYou have 3 seconds to click on your Stream software.", 
                  font=("Arial", 10), bg="#f0f0f0", pady=10).pack(fill="x")
 
-        # Liste déroulante
+        # dropdown menu
         self.canvas = tk.Canvas(self)
         self.scrollbar = ttk.Scrollbar(self, orient="vertical", command=self.canvas.yview)
         self.scroll_frame = tk.Frame(self.canvas)
@@ -213,11 +213,11 @@ class SetupWizard(tk.Toplevel):
         self.scrollbar.pack(side="right", fill="y")
 
         # Items
-        # 1. Neutre
-        self.create_row("NEUTRE", self.config['keys'].get("NEUTRE", ""))
+        # 1. NEUTRAL
+        self.create_row("NEUTRAL", self.config['keys'].get("NEUTRAL", ""))
         
-        # 2. Autres
-        for act in ["SOURIRE", "FRONCEMENT", "HAUSSEMENT", "MALICIEUX", "PENCHE", "CLIN_DOEIL", "REFLECHIR"]:
+        # 2. other
+        for act in ["SMILE", "FROWN", "RAISE", "MALICIOUS", "TILT", "WINK", "THINKING"]:
             self.create_row(act, self.config['keys'].get(act, ""))
 
     def create_row(self, label, key):
@@ -227,7 +227,7 @@ class SetupWizard(tk.Toplevel):
         tk.Label(frame, text=f"{label}", width=15, anchor="w", font=("Arial", 10, "bold")).pack(side=tk.LEFT)
         tk.Label(frame, text=f"[{key}]", width=8, fg="blue").pack(side=tk.LEFT)
         
-        btn = tk.Button(frame, text="⏱️ Envoyer (3s)", bg="#ddd", 
+        btn = tk.Button(frame, text="⏱️ Send (3s)", bg="#ddd", 
                         command=lambda k=key: self.send_key_delayed(k, btn))
         btn.pack(side=tk.RIGHT)
 
@@ -244,15 +244,15 @@ class SetupWizard(tk.Toplevel):
             time.sleep(1)
             
             pyautogui.press(key)
-            print(f"Simulation touche : {key}")
+            print(f"Simulation key : {key}")
             
-            btn.config(bg="#4CAF50", text="ENVOYÉ !")
+            btn.config(bg="#4CAF50", text="SENT !")
             time.sleep(1)
             btn.config(bg="#ddd", text=orig_text)
 
         threading.Thread(target=run, daemon=True).start()
 
-# --- INTERFACE PRINCIPALE ---
+# --- MAIN INTERFACE ---
 class App:
     def __init__(self, window, window_title):
         self.window = window
@@ -272,28 +272,28 @@ class App:
         self.header_frame.pack(side=tk.TOP, fill="x", padx=10, pady=10)
         tk.Label(self.header_frame, text="PNGTuber Controller v1.0", font=("Arial", 16, "bold"), bg="#f0f0f0").pack(pady=5)
         
-        frame_neutral = tk.LabelFrame(self.header_frame, text="Retour au calme (NEUTRE)", bg="#e6e6e6", pady=5)
+        frame_neutral = tk.LabelFrame(self.header_frame, text="Back to Calm (NEUTRAL)", bg="#e6e6e6", pady=5)
         frame_neutral.pack(fill="x", pady=5)
         tk.Label(frame_neutral, text="Touche:", bg="#e6e6e6").pack(side=tk.LEFT, padx=5)
         self.entry_neutral = tk.Entry(frame_neutral, width=8)
-        self.entry_neutral.insert(0, self.config['keys'].get("NEUTRE", "f13"))
+        self.entry_neutral.insert(0, self.config['keys'].get("NEUTRAL", "f13"))
         self.entry_neutral.pack(side=tk.LEFT, padx=5)
 
         # 2. FOOTER
         self.footer_frame = tk.Frame(self.left_container, bg="#f0f0f0")
         self.footer_frame.pack(side=tk.BOTTOM, fill="x", padx=10, pady=10)
         
-        # Bouton Assistant (NOUVEAU)
+        # Wizard button
         self.btn_wizard = tk.Button(self.footer_frame, text="🛠️ Assistant Setup Touches", command=self.open_wizard, bg="#FFD700", height=1)
         self.btn_wizard.pack(pady=5, fill="x")
 
         self.var_preview = tk.BooleanVar(value=True)
-        tk.Checkbutton(self.footer_frame, text="Afficher Retour Caméra", var=self.var_preview, bg="#f0f0f0").pack(pady=5)
-        self.btn_save = tk.Button(self.footer_frame, text="💾 Sauvegarder Config", command=self.save_config, bg="#ddd", height=2)
+        tk.Checkbutton(self.footer_frame, text="Show Camera Preview", var=self.var_preview, bg="#f0f0f0").pack(pady=5)
+        self.btn_save = tk.Button(self.footer_frame, text="💾 Save Config", command=self.save_config, bg="#ddd", height=2)
         self.btn_save.pack(pady=5, fill="x")
-        self.btn_start = tk.Button(self.footer_frame, text="▶ DÉMARRER", command=self.toggle_camera, bg="#4CAF50", fg="white", font=("Arial", 12, "bold"), height=2)
+        self.btn_start = tk.Button(self.footer_frame, text="▶ START", command=self.toggle_camera, bg="#4CAF50", fg="white", font=("Arial", 12, "bold"), height=2)
         self.btn_start.pack(pady=5, fill="x")
-        self.lbl_status = tk.Label(self.footer_frame, text="Status: Arrêté", fg="red", bg="#f0f0f0")
+        self.lbl_status = tk.Label(self.footer_frame, text="Status: Stopped", fg="red", bg="#f0f0f0")
         self.lbl_status.pack(pady=5)
 
         # 3. SCROLL
@@ -313,7 +313,7 @@ class App:
         self.entries_duration = {}
         self.vars_enabled = {}
         
-        actions = ["SOURIRE", "FRONCEMENT", "HAUSSEMENT", "MALICIEUX", "PENCHE", "CLIN_DOEIL", "REFLECHIR"]
+        actions = ["SMILE", "FROWN", "RAISE", "MALICIOUS", "TILT", "WINK", "THINKING"]
         
         for act in actions:
             frame = tk.LabelFrame(self.scrollable_frame, bg="#f0f0f0", pady=5)
@@ -323,7 +323,7 @@ class App:
             self.vars_enabled[act] = var_enable
             
             title = act
-            if act == "REFLECHIR": title += " (Nécessite Mains)"
+            if act == "THINKING": title += " (Nécessite Mains)"
             
             chk = tk.Checkbutton(frame, text=title, variable=var_enable, font=("Arial", 10, "bold"), bg="#f0f0f0", anchor="w")
             chk.pack(fill="x", padx=5)
@@ -362,28 +362,27 @@ class App:
         self.canvas_scroll.yview_scroll(int(-1*(event.delta/120)), "units")
 
     def open_wizard(self):
-        # Sauvegarde d'abord pour être sûr d'avoir les touches à jour
         self.save_config_silent()
         SetupWizard(self.window, self.config)
 
     def load_config(self):
         default = {
             "keys": {
-                "NEUTRE": "f13", "SOURIRE": "f14", "FRONCEMENT": "f15", 
-                "HAUSSEMENT": "f16", "MALICIEUX": "f17", "PENCHE": "f18", 
-                "CLIN_DOEIL": "f19", "REFLECHIR": "f20"
+                "NEUTRAL": "f13", "SMILE": "f14", "FROWN": "f15", 
+                "RAISE": "f16", "MALICIOUS": "f17", "TILT": "f18", 
+                "WINK": "f19", "THINKING": "f20"
             },
             "thresholds": {
-                "SOURIRE": 0.5, "FRONCEMENT": 0.4, "HAUSSEMENT": 0.5, 
-                "MALICIEUX": 0.7, "PENCHE": 0.3, "CLIN_DOEIL": 0.2, "REFLECHIR": 0.6
+                "SMILE": 0.5, "FROWN": 0.4, "RAISE": 0.5, 
+                "MALICIOUS": 0.7, "TILT": 0.3, "WINK": 0.2, "THINKING": 0.6
             },
             "enabled": {
-                "SOURIRE": True, "FRONCEMENT": True, "HAUSSEMENT": True, 
-                "MALICIEUX": True, "PENCHE": True, "CLIN_DOEIL": True, "REFLECHIR": True
+                "SMILE": True, "FROWN": True, "RAISE": True, 
+                "MALICIOUS": True, "TILT": True, "WINK": True, "THINKING": True
             },
             "min_durations": {
-                "SOURIRE": 0.5, "FRONCEMENT": 0.5, "HAUSSEMENT": 0.5, 
-                "MALICIEUX": 1.0, "PENCHE": 0.5, "CLIN_DOEIL": 0.2, "REFLECHIR": 1.0
+                "SMILE": 0.5, "FROWN": 0.5, "RAISE": 0.5, 
+                "MALICIOUS": 1.0, "TILT": 0.5, "WINK": 0.2, "THINKING": 1.0
             }
         }
         if os.path.exists(CONFIG_FILE):
@@ -405,8 +404,8 @@ class App:
             self.config = default
 
     def save_config_silent(self):
-        """ Sauvegarde sans afficher de popup (utile pour le wizard) """
-        self.config['keys']['NEUTRE'] = self.entry_neutral.get()
+        """ Saving without displaying popup (useful for the wizard) """
+        self.config['keys']['NEUTRAL'] = self.entry_neutral.get()
         if 'min_durations' not in self.config: self.config['min_durations'] = {}
         for act in self.sliders:
             self.config['thresholds'][act] = self.sliders[act].get()
@@ -420,21 +419,21 @@ class App:
 
     def save_config(self):
         self.save_config_silent()
-        messagebox.showinfo("Info", "Configuration sauvegardée !")
+        messagebox.showinfo("Info", "Configuration saved !")
 
     def toggle_camera(self):
         if self.detector.running:
             self.detector.running = False
             if self.detector.cap:
                 self.detector.cap.release()
-            self.btn_start.config(text="▶ DÉMARRER", bg="#4CAF50")
-            self.lbl_status.config(text="Status: Arrêté", fg="red")
+            self.btn_start.config(text="▶ START", bg="#4CAF50")
+            self.lbl_status.config(text="Status: Stopped", fg="red")
             self.canvas.delete("all")
         else:
             self.detector.cap = cv2.VideoCapture(self.video_source)
             self.detector.running = True
             self.btn_start.config(text="⏹ STOP", bg="#f44336")
-            self.lbl_status.config(text="Status: En cours", fg="green")
+            self.lbl_status.config(text="Status: Running", fg="green")
 
     def update(self):
         if self.detector.running and self.detector.cap.isOpened():
@@ -450,7 +449,7 @@ class App:
                 action = self.detector.detect(frame, thresholds, enabled_dict, min_durations)
                 
                 if action != self.detector.current_action:
-                    key = self.entry_neutral.get() if action == "NEUTRE" else self.entries.get(action, tk.Entry()).get()
+                    key = self.entry_neutral.get() if action == "NEUTRAL" else self.entries.get(action, tk.Entry()).get()
                     if key:
                         pyautogui.press(key)
                         print(f"Action: {action} -> {key}")
@@ -458,10 +457,10 @@ class App:
                     self.detector.current_action = action
                     
                     color_map = {
-                        "NEUTRE": "#00FF00", "MALICIEUX": "#A020F0", 
-                        "FRONCEMENT": "#FF0000", "HAUSSEMENT": "#FFFF00", 
-                        "SOURIRE": "#00FFFF", "PENCHE": "#FF1493",
-                        "CLIN_DOEIL": "#FFA500", "REFLECHIR": "#1E90FF"
+                        "NEUTRAL": "#00FF00", "MALICIOUS": "#A020F0", 
+                        "FROWN": "#FF0000", "RAISE": "#FFFF00", 
+                        "SMILE": "#00FFFF", "TILT": "#FF1493",
+                        "WINK": "#FFA500", "THINKING": "#1E90FF"
                     }
                     color = color_map.get(action, "white")
                     self.lbl_current_action.config(text=f"ACTION : {action}", fg=color)
@@ -479,14 +478,14 @@ class App:
                         self.photo = PIL.ImageTk.PhotoImage(image=PIL.Image.fromarray(frame))
                         self.canvas.create_image((cw - new_w)//2, (ch - new_h)//2, image=self.photo, anchor=tk.NW)
                     
-                    if self.detector.has_hand_model and action == "REFLECHIR":
-                        self.canvas.create_text(20, 20, text="MAIN DETECTEE", fill="cyan", anchor="nw")
+                    if self.detector.has_hand_model and action == "THINKING":
+                        self.canvas.create_text(20, 20, text="HAND DETECTED", fill="cyan", anchor="nw")
 
                 else:
                     if len(self.canvas.find_all()) > 1:
                          self.canvas.delete("all")
                          self.canvas.create_text(self.canvas.winfo_width()//2, self.canvas.winfo_height()//2, 
-                                               text="MONITORING ACTIF\n(Aperçu désactivé)", fill="gray", font=("Arial", 14))
+                                               text="MONITORING ACTIVE\n(Preview disabled)", fill="gray", font=("Arial", 14))
 
         self.window.after(self.delay, self.update)
 
