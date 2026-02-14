@@ -6,18 +6,19 @@ import json
 import math
 import threading
 
-# --- 1. DYNAMIC TCL/TK CONFIGURATION ---
+# --- CONFIGURATION DYNAMIQUE TCL/TK ---
 if getattr(sys, 'frozen', False):
     base_path = sys._MEIPASS
-    os.environ['TCL_LIBRARY'] = os.path.join(base_path, 'tcl', 'tcl8.6')
-    os.environ['TK_LIBRARY'] = os.path.join(base_path, 'tcl', 'tk8.6')
+    tcl_dir = os.path.join(base_path, 'tcl', 'tcl8.6')
+    tk_dir = os.path.join(base_path, 'tcl', 'tk8.6')
 else:
-    python_dir = sys.exec_prefix
-    tcl_path = os.path.join(python_dir, "tcl", "tcl8.6")
-    tk_path = os.path.join(python_dir, "tcl", "tk8.6")
-    if os.path.exists(tcl_path):
-        os.environ['TCL_LIBRARY'] = tcl_path
-        os.environ['TK_LIBRARY'] = tk_path
+    base_path = sys.base_prefix
+    tcl_dir = os.path.join(base_path, "tcl", "tcl8.6")
+    tk_dir = os.path.join(base_path, "tcl", "tk8.6")
+
+if os.path.exists(tcl_dir):
+    os.environ['TCL_LIBRARY'] = tcl_dir
+    os.environ['TK_LIBRARY'] = tk_dir
 
 import tkinter as tk
 from tkinter import ttk, messagebox
@@ -274,7 +275,7 @@ class App:
         
         frame_neutral = tk.LabelFrame(self.header_frame, text="Back to Calm (NEUTRAL)", bg="#e6e6e6", pady=5)
         frame_neutral.pack(fill="x", pady=5)
-        tk.Label(frame_neutral, text="Touche:", bg="#e6e6e6").pack(side=tk.LEFT, padx=5)
+        tk.Label(frame_neutral, text="key:", bg="#e6e6e6").pack(side=tk.LEFT, padx=5)
         self.entry_neutral = tk.Entry(frame_neutral, width=8)
         self.entry_neutral.insert(0, self.config['keys'].get("NEUTRAL", "f13"))
         self.entry_neutral.pack(side=tk.LEFT, padx=5)
@@ -284,7 +285,7 @@ class App:
         self.footer_frame.pack(side=tk.BOTTOM, fill="x", padx=10, pady=10)
         
         # Wizard button
-        self.btn_wizard = tk.Button(self.footer_frame, text="🛠️ Assistant Setup Touches", command=self.open_wizard, bg="#FFD700", height=1)
+        self.btn_wizard = tk.Button(self.footer_frame, text="🛠️ Assistant Setup keys", command=self.open_wizard, bg="#FFD700", height=1)
         self.btn_wizard.pack(pady=5, fill="x")
 
         self.var_preview = tk.BooleanVar(value=True)
@@ -323,7 +324,7 @@ class App:
             self.vars_enabled[act] = var_enable
             
             title = act
-            if act == "THINKING": title += " (Nécessite Mains)"
+            if act == "THINKING": title += " (Requires Hands)"
             
             chk = tk.Checkbutton(frame, text=title, variable=var_enable, font=("Arial", 10, "bold"), bg="#f0f0f0", anchor="w")
             chk.pack(fill="x", padx=5)
@@ -331,19 +332,19 @@ class App:
             grid_frame = tk.Frame(frame, bg="#f0f0f0")
             grid_frame.pack(fill="x", padx=5, pady=2)
 
-            tk.Label(grid_frame, text="Touche:", bg="#f0f0f0").grid(row=0, column=0, sticky="w")
+            tk.Label(grid_frame, text="key:", bg="#f0f0f0").grid(row=0, column=0, sticky="w")
             entry = tk.Entry(grid_frame, width=6)
             entry.insert(0, self.config['keys'].get(act, ""))
             entry.grid(row=0, column=1, padx=5)
             self.entries[act] = entry
 
-            tk.Label(grid_frame, text="Durée(s):", bg="#f0f0f0").grid(row=0, column=2, sticky="w")
+            tk.Label(grid_frame, text="Hold Duration:", bg="#f0f0f0").grid(row=0, column=2, sticky="w")
             entry_dur = tk.Entry(grid_frame, width=5)
             entry_dur.insert(0, str(self.config['min_durations'].get(act, 0.5)))
             entry_dur.grid(row=0, column=3, padx=5)
             self.entries_duration[act] = entry_dur
 
-            tk.Label(frame, text="Sensibilité:", bg="#f0f0f0", font=("Arial", 8)).pack(anchor="w", padx=5)
+            tk.Label(frame, text="sensitivity:", bg="#f0f0f0", font=("Arial", 8)).pack(anchor="w", padx=5)
             slider = tk.Scale(frame, from_=0.0, to=1.0, resolution=0.01, orient=tk.HORIZONTAL, bg="#f0f0f0", length=250)
             slider.set(self.config['thresholds'].get(act, 0.5))
             slider.pack(fill="x", padx=5)
@@ -351,7 +352,7 @@ class App:
 
         self.right_frame = tk.Frame(window, bg="black")
         self.right_frame.pack(side=tk.RIGHT, expand=True, fill=tk.BOTH, padx=10, pady=10)
-        self.lbl_current_action = tk.Label(self.right_frame, text="En attente...", font=("Arial", 20, "bold"), bg="black", fg="white")
+        self.lbl_current_action = tk.Label(self.right_frame, text="waiting...", font=("Arial", 20, "bold"), bg="black", fg="white")
         self.lbl_current_action.pack(side=tk.TOP, fill="x", pady=5)
         self.canvas = tk.Canvas(self.right_frame, bg="#222")
         self.canvas.pack(expand=True, fill="both")
